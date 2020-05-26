@@ -1,108 +1,79 @@
 /**
- * 
+ *
  * Manipulating the DOM exercise.
  * Exercise programmatically builds navigation,
  * scrolls to anchors from navigation,
  * and highlights section in viewport upon scrolling.
- * 
+ *
  * Dependencies: None
- * 
+ *
  * JS Version: ES2015/ES6
- * 
+ *
  * JS Standard: ESlint
- * 
-*/
+ *
+ */
 
 /**
  * Define Global Variables
- * 
-*/
-const navbar = document.querySelector('#navbar__list');
-const sections = document.querySelectorAll('section')
+ *
+ */
+
+const navElements = document.querySelectorAll('section')
+const navList = document.getElementById('navbar__list')
 
 /**
  * End Global Variables
- * Start Helper Functions
- * 
-*/
+ */
 
-// check which element is active
-function getActiveElem() {
-    maxSection = sections[0];
-    minVal = 1000000;
-    for (item of sections) {
-        let bounding = item.getBoundingClientRect();
-        if (bounding.top > -300 & bounding.top < minVal) {
-            minVal = bounding.top;
-            maxSection = item;
-        };
-    };
-    return maxSection;
-};
+// Build menu by iterating through the navelements
+navElements.forEach(el => {
+  const navlistElement = `<li class='menu__link ${el.className}' data-link=${el.id}><a href="#${el.id}">${el.dataset.nav}</li>`
+  navList.insertAdjacentHTML('beforeend', navlistElement)
+})
 
-/**
- * End Helper Functions
- * Begin Main Functions
- * 
-*/
+// Scroll to section on link click by listenting to the click-event in the navlist
+navList.addEventListener('click', e => {
+  e.preventDefault()
+  const parent = e.target.hasAttribute('data-link')
+    ? e.target
+    : e.target.parentElement
+  const elementToScrollTo = document.getElementById(parent.dataset.link)
+  elementToScrollTo.scrollIntoView({block: 'end', behavior: 'smooth'})
+})
 
-// build the nav
-function addSections() {
-    for (let item of sections) {
-        let section = document.createElement('li');
-        section.className = 'menu__link';
-        section.dataset.nav = item.id;
-        section.innerText = item.dataset.nav;
-        navbar.appendChild(section);
-    };
-};
+// Set section and nav link as active using the IntersectionObserver pattern
+const callback = entries => {
+  entries.forEach(entry => {
+    const navListElement = document.querySelector(
+      `.menu__link[data-link='${entry.target.id}']`,
+    )
+    const section = document.getElementById(entry.target.id)
 
-// Add class 'active' to section when near top of viewport
-function setActive () {
-    window.addEventListener('scroll', function (event) {
-        let section = getActiveElem();
-        section.classList.add('your-active-class');
-        // set other sections as inactive
-        for (let item of sections) {
-            if (item.id != section.id & item.classList.contains('your-active-class')) {
-                item.classList.remove('your-active-class');
-            }
-        }
-        // set corresponding header style
-        const active = document.querySelector('li[data-nav="' + section.id + '"]');
-        active.classList.add('active__link');
-        // remove from other headers
-        const headers = document.querySelectorAll('.menu__link');
-        for (let item of headers) {
-            console.log(item);
-            if (item.dataset.nav != active.dataset.nav & item.classList.contains('active__link')) {
-                item.classList.remove('active__link');
-            }
-        };
-    });
-};
+    if (entry && entry.isIntersecting) {
+      navListElement.classList.add('active')
+      section.classList.add('active')
+    } else {
+      if (navListElement.classList.contains('active')) {
+        navListElement.classList.remove('active')
+      }
 
-// Scroll to anchor ID using scrollTO event
-function scrollToClick() {
-    navbar.addEventListener('click', function (event) {
-        const clicked = document.querySelector('#' + event.target.dataset.nav)
-        clicked.scrollIntoView();
-    });
-};
+      if (section.classList.contains('active')) {
+        section.classList.remove('active')
+      }
+    }
+  })
+}
 
+// Options for the observer. Most important is the threshold
+const options = {
+  root: null,
+  rootMargin: '0px',
+  threshold: 0.6,
+}
 
-/**
- * End Main Functions
- * Begin Events
- * 
-*/
-
-// Build menu 
-addSections();
-
-// Scroll to section on link click
-scrollToClick();
-
-// Set sections as active
-setActive();
-
+// Setting an observer with options and a callback which checks if the navelement should be active
+// support for all modern browser https://caniuse.com/#feat=intersectionobserver
+const observer = new IntersectionObserver(callback, options)
+navElements.forEach(el => {
+  observer.observe(document.getElementById(el.id))
+})
